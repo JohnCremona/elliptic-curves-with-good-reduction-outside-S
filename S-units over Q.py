@@ -2,10 +2,10 @@ def initial_bound(S):
     r"""
     
     INPUT:
-        - ``S`` : a finite set of prime numbers
+        - ``S`` : a list of prime numbers
     
     OUTPUT:
-        A big upper bound for the absolute value of the exponents of the solutions of the `S`-unit equation `x \pm y=1`. It is based on the theorem 6.1 of the reference.
+        A (large) upper bound for the absolute value of the exponents of the solutions of the `S`-unit equation `x \pm y=1`. This is based on the theorem 6.1 of the reference.
         
     REFERENCE:
         B.M.M.De Weger. Algorithms For Diophantine Equations. PhD thesis, University of Leiden, 1988.
@@ -15,70 +15,55 @@ def initial_bound(S):
         sage: S = [2,7,11]
         sage: initial_bound(S).n(21)
             4.09901e19
-    """
-    
+    """    
     C1t = [768523,476217,373024,318871,284931,261379,2770008]
     s = len(S)
-    t1 = (2 * s)/3
-    t = QQ(t1).floor()
+    t = (2 * s)/3 # rounded down
     P = prod(S)
-    Q = []
-    for q in S:
-        m = q * (q-1)
-        find = False
+    q = 0
+    for p in S:
+        m = p * (p-1)
         qi = Integer(3)
-        while not find:
-            if qi.divides(m):
-                qi = Primes().next(qi)
-            else:
-                find = True
-        Q.append(qi)
-    q = max(Q)
-    if t < 8:
+        while qi.divides(m):
+            qi = qi.next_prime()
+        qi = max(qi, q)
+    q = RR(q)
+
+    e = RR(1).exp()
+    if t<8:
         a1 = (56 * e)/15
+        c = C1t[t-2]
     else:
         a1 = (8 * e)/3
-    if t >= 8:
         c = C1t[6]
-    else:
-        c = C1t[t-2]
         
-    m = max([((q-1) * (2+1/(q-1))**t)/((log(q))**(t+2)) for q in S])
-    U = c*(a1**t)*(t**((t+5)/2))*(q**(2*t))*(q-1)*((log(t*q))**2)*m*(log(S[s-1])**t)*(log(4*log(S[s-1]))+log(S[s-1])/(8*t))
+    m = max([((qi-1) * (2+1/(qi-1))**t)/((qi.log())**(t+2)) for qi in S])
+    # Does this assume that S[s-1] is the largest?
+    smax = S[-1]
+    smin = S[0]
+    log_smax = RR(smax).log()
+    log_smin = RR(smin).log()
+    U = c*(a1**t)*(t**((t+5)/2))*(q**(2*t))*(q-1)*(((t*q).log())**2)*m*(log_smax**t)*(log(4*log_smax)+log_smax/(8*t))
     C1 = U/(6 * t)
-    C2 = U * log(4)
+    C2 = U * RR(4).log()
     Omega = 1
     for i in range(s-t,s):
-        Vi = 1
-        Vs_1 = 1
-        Vs = 1
-        if Vi < log(S[i]):
-            Vi = log(S[i])
+        Vi = Vs_1 = Vs = RR(1)
+        Vi = max(Vi, RR(S[i]).log())
         if i == s-2:
             Vs_1 = Vi
         if i == s-1:
             Vs = Vi
         Omega = Omega * Vi
-    C3 = 2**(9 * t + 26) * t**(t + 4) * Omega * log(e * Vs_1)
-    C4 = 7.4
-    a = (C1 * log(P/S[0]) + C3)/log(S[0])
-    if a > C4:
-        C4 = a
-    C5 = (C2 * log(P/S[0])+C3 * log(e * Vs)+0.327)/log(S[0])
-    C6 = C5
-    a = (C2 * log(P/S[0]) + log(2))/log(S[0])
-    if a > C6:
-        C6 = a
-    C7 = 2 * (C6 + C4 * log(C4))
-    C8 = S[s-1]
-    if C8 < log(2 * (P/S[0])**S[s-1])/log(S[0]):
-        C8 = log(2 * (P/S[0])**S[s-1])/log(S[0])
-    if C8 < C2 + C1 * log(C7):
-        C8 = C2+C1*log(C7)
-    if C8 < C7:
-        C8 = C7
+    C3 = 2**(9 * t + 26) * t**(t + 4) * Omega * (1+Vs_1.log())
+    P0 = RR(P)/smin
+    log_P0 = P0.log()
+    C4 = max(RR(7.4),  (C1 * log_P0 + C3)/log_smin)
+    C6 = max((C2 * log_P0+C3 * log(e * Vs)+0.327)/log_smin,
+             (C2 * log_P0 + RR(2).log())/log_smin)
+    C7 = 2 * (C6 + C4 * C4.log())
+    C8 = max([smax, log(2 * P0**smax)/log_smin, C2 + C1 * C7.log(), C7])
     return C8
-
 
 def primitive_p_1_root_mod_pn(p,n):
     r"""
