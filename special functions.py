@@ -192,5 +192,3 @@ def Norm_subgroup_division_field(SK,SL):
 
         lambda_group = [SunitL.exp(v) for v in Gens.rows()]
         return lambda_group, [sigma(g**(-1)) for g in lambda_group]
-
-

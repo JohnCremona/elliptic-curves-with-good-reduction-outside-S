@@ -285,54 +285,6 @@ def Yu_theorem(A,prime,embeddings):
     return c1*c2*c3,c1*c2*c3*c4
 
 
-def minimal_vector(A,y):
-    r"""
-    
-    INPUT:
-        - ``A`` : an square non-singular integer matrix whose rows generate a lattice `\mathcal L`
-        - ``y`` : a row vector with integer coordinates
-        
-    OUTPUT:
-        A low bound for the square of `\ell (\mathcal L,\vec y) =\begin{cases}\displaystyle\min_{\vec x\in\mathcal L}\Vert\vec x-\vec y\Vert &, \vec y\not\in\mathcal L. \\ \displaystyle\min_{0\neq\vec x\in\mathcal L}\Vert\vec x\Vert&,\vec y\in\mathcal L.\end{cases}`
-    
-    COMMENT:
-        The algorithm is based on V.9 and V.10 of the reference
-        
-    REFERENCE:
-        Nigel P. Smart. The Algorithmic Resolution of Diophantine Equations. Number 41 in Students Texts. London Mathematical Society, 1998.
-    
-    EXAMPLE::
-        
-        sage: B = matrix(ZZ,2,[1,1,1,0])
-        sage: y = vector(ZZ,[2,1])
-        sage: minimal_vector(B,y)
-            1/2
-            
-        sage: B = random_matrix(ZZ,3)
-        sage: B
-            [-2 -1 -1]
-            [ 1  1 -2]
-            [ 6  1 -1]
-        sage: y = vector([1,2,100])
-        sage: minimal_vector(B,y)
-            15/28
-    """
-    if A.is_singular():
-        raise ValueError('The matrix A is singular')
-      
-    n = len(y)
-    c1 = 2**(n-1)
-    ALLL = A.LLL()
-    ALLLinv = ALLL.inverse()
-    ybrace = [(a-round(a)).abs() for a in y * ALLLinv if (a-round(a)) != 0]
-    
-    if len(ybrace) == 0:
-        return (ALLL.rows()[0].norm())**2 / c1
-    else:
-        sigma = ybrace[len(ybrace)-1]
-        return ((ALLL.rows()[0].norm())**2 * sigma) / c1
-
-
 def higher_precision(place,new_prec):
     r"""
     

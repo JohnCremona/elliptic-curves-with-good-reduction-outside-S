@@ -1,3 +1,51 @@
+def minimal_vector(A,y):
+    r"""
+
+    INPUT:
+        - ``A`` : an square non-singular integer matrix whose rows generate a lattice `\mathcal L`
+        - ``y`` : a row vector with integer coordinates
+
+    OUTPUT:
+        A low bound for the square of `\ell (\mathcal L,\vec y) =\begin{cases}\displaystyle\min_{\vec x\in\mathcal L}\Vert\vec x-\vec y\Vert &, \vec y\not\in\mathcal L. \\ \displaystyle\min_{0\neq\vec x\in\mathcal L}\Vert\vec x\Vert&,\vec y\in\mathcal L.\end{cases}`
+
+    COMMENT:
+        The algorithm is based on V.9 and V.10 of the reference
+
+    REFERENCE:
+        Nigel P. Smart. The Algorithmic Resolution of Diophantine Equations. Number 41 in Students Texts. London Mathematical Society, 1998.
+
+    EXAMPLE::
+
+        sage: B = matrix(ZZ,2,[1,1,1,0])
+        sage: y = vector(ZZ,[2,1])
+        sage: minimal_vector(B,y)
+            1/2
+
+        sage: B = random_matrix(ZZ,3)
+        sage: B
+            [-2 -1 -1]
+            [ 1  1 -2]
+            [ 6  1 -1]
+        sage: y = vector([1,2,100])
+        sage: minimal_vector(B,y)
+            15/28
+    """
+    if A.is_singular():
+        raise ValueError('The matrix A is singular')
+
+    n = len(y)
+    c1 = 2**(n-1)
+    ALLL = A.LLL()
+    ALLLinv = ALLL.inverse()
+    ybrace = [(a-round(a)).abs() for a in y * ALLLinv if (a-round(a)) != 0]
+
+    if len(ybrace) == 0:
+        return (ALLL.rows()[0].norm())**2 / c1
+    else:
+        sigma = ybrace[len(ybrace)-1]
+        return ((ALLL.rows()[0].norm())**2 * sigma) / c1
+
+
 def initial_bound(S):
     r"""
     
@@ -83,7 +131,7 @@ def primitive_p_1_root_mod_pn(p,n):
             596
     """
     if p == 2 and n > 2:
-        return mod(1,p^n)
+        return mod(1,p**n)
     ap = mod(primitive_root(p),p**n)
     for i in range(n-1):
         ap = ap**p
@@ -98,7 +146,8 @@ def change_basis(v):
         - ``v`` : a list of integer numbers
         
     OUTPUT:
-        If `v=[v_1,...,v_n]`, `gcd(v)=g` and `g=l_1v_1+\cdots +l_nv_n` then the function gives you a matrix in `\mathbb Z` which is invertible and its last row is `[l_1,\cdots,l_n]`
+        If `v=[v_1,...,v_n]`, `gcd(v)=g` and `g=l_1v_1+\cdots +l_nv_n` then the function gives you a matrix in
+        `\mathbb Z` which is invertible and its last row is `[l_1,\cdots,l_n]`
     
     EXAMPLE::
         
@@ -199,20 +248,24 @@ def a_base_for_Gm_star(B,A,p,m,m0):
     n = len(A)
     zeta = primitive_p_1_root_mod_pn(p,m+m0)
     xi = [prod([A[j]**B[j,i] for j in range(n)]) for i in range(n)]
-    
+
     #xi has the values of the products Π ai^xi with x=bi
     #kbi has the values of the exponents k(bi)
     #zeta_powers contains the powers of zeta 
-    
-    zeta_powers=[mod(zeta**i,p**(m+m0)) for i in range(p-1)]
-    
+
+    zeta_powers = [mod(zeta**i,p**(m+m0)) for i in range(p-1)]
     kbi = [min([k for k in range(p-1) if (mod(xi[i],p**(m+m0))-zeta_powers[k]) == 0]) for i in range(n)]
 
-    
-    V = change_basis(kbi)    #V is the matrix which change the basis of Gamma from the basis b to the basis b'
-    B2 = B * (V.inverse())   #B2 is now the matrix of the Gamma lattice with respect to the basis b'
+
+    #V is the matrix which change the basis of Gamma from the basis b to the basis b'
+    V = change_basis(kbi)
+
+    #B2 is the matrix of the Gamma lattice with respect to the basis b'
+    B2 = B * (V.inverse())
     kbi = matrix(kbi).transpose()
-    kbi = V*kbi              #kbi is containing the exponents of the new basis b'
+
+    #kbi is containing the exponents of the new basis b'
+    kbi = V*kbi
     B2 = B2.transpose()
     
     
@@ -259,26 +312,29 @@ def reducing_the_bound(X0,A,p,m):
     A[pos] = A[n-1]
     A[n-1] = a
     m0 = A_log[n-1].valuation()
-    
-    if p > 3:       #if p>3 we find a matrix for Gm* lattice. Otherwise Gm=Gm*
+
+    #if p>3 we find a matrix for Gm* lattice. Otherwise Gm=Gm*
+    if p > 3:
         Bmstar = a_base_for_Gm_star(Bm[0],A,p,m,m0)
     else:
         Bmstar = Bm[0]
-    
-    Bmstar = Bmstar.transpose()                 #We have to take the transpose of the matrix because of the 
-                                                #LLL() function
-    C = Bmstar.LLL()                            #assume that the rows of the matrix generate the lattice
+
+    #We have to take the transpose of the matrix because of the
+    #LLL() function
+    Bmstar = Bmstar.transpose()
+
+    #assume that the rows of the matrix generate the lattice
+    C = Bmstar.LLL()
     e = copy(zero_vector(ZZ,n))
     e[0] = 1
-    v =e * C
-    vnorm=v.norm()**2
+    v = e * C
+    vnorm = v.norm()**2
     if 2**(1-n) * vnorm > n * X0**2:
         increase_m = False
         X0 = (m-1+m0)
     else:
         increase_m = True
-        
-    
+
     return [X0,increase_m]
 
 
@@ -301,29 +357,32 @@ def find_the_new_bound_for_all_primes(X0,A,precision):
         sage: find_the_new_bound_for_all_primes(10000,[2,3,5,7,11,13],250)
             [85, 53, 37, 29, 24, 22]            
     """
-    n = len(A)
-    B = [1] * n
-    for i in range(n):       #for its prime in A we are going to find a new bound
-        p = A[i]
+    B = [1] * len(A)
+    for i,p in enumerate(A):
+        #for its prime in A we are going to find a new bound
         K = Qp(p, prec = precision, type = 'capped-rel', print_mode = 'series')
-        e = [K(a) for a in A if a != p]         #e = a vector with the primes different to p as Qp elements
+
+        #e = a vector with the primes different to p as Qp elements
+        e = [K(a) for a in A if a != p]
+        m0 = min([a.log().valuation() for a in e])
         m = (2 * log(X0)/log(p)).round()
         newbound = True
         while newbound:
             T = reducing_the_bound(X0,e,p,m)
+
             newbound = T[1]
-            m = m+1
-            if m > K.precision_cap():
+            m += 1
+            if m + m0 > K.precision_cap():
                 # Sieve
                 #if m is bigger than the precision we have, we have to increase it an evaluate all the p-adic numbers 
                 
                 K = Qp(p, prec = 2 * K.precision_cap(), type = 'capped-rel', print_mode = 'series')
-                e = [K(A[j]) for j in range(n) if i != j]
+                e = [K(A[j]) for j in range(len(A)) if i != j]
         B[i] = T[0]
         
     return B
-    
-    
+
+
 def applying_De_Weger_method(A,precision):
     r"""
     
@@ -347,12 +406,12 @@ def applying_De_Weger_method(A,precision):
     return Xnew   
 
 
-def simple_loop(S,B):
+def simple_loop(S,bounds):
     r"""
     
     INPUT:
         - ``S`` : a list of primes
-        - ``B`` : a natural number
+        - ``bounds`` : a list of upper bounds of the absolute value of the exponents
         
     OUTPUT:
         All the `x` of the pairs of the solutions of the `S`-unit equation `x+y=1` such that the absolute values of the exponents of `x,y` are smaller than ``B``
@@ -366,9 +425,9 @@ def simple_loop(S,B):
             [1/16, 15/16, -15, 16, 1/4, 3/4, -3, 4, 1/6, 5/6, -5, 6, 1/10, 9/10, -9,
             10, 1/2, 1/2, -1, 2, 1/81, 80/81, -80, 81, 1/9, 8/9, -8, 9, 1/3, 2/3,
             -2, 3, 1/25, 24/25, -24, 25, 1/5, 4/5, -4, 5]
-    """  
+    """
     solutions = []     
-    for v in cartesian_product_iterator([xrange(-B,B+1)] * len(S)):
+    for v in cartesian_product_iterator([xrange(-b,b+1) if b !=0 else xrange(1) for b in bounds]):
         #for each candidate x we store the potential y in T
         T = [1]
         x = 1
@@ -380,7 +439,7 @@ def simple_loop(S,B):
                     y = y * pr**exp
                     temp = temp + [y]
                 elif exp == 0:
-                    for j in range(B+1):
+                    for j in range(bounds[S.index(pr)]+1):
                         temp = temp + [y * pr**j]
             T = temp
         for y in T:
@@ -389,11 +448,12 @@ def simple_loop(S,B):
     return solutions
 
 
-def solve_S_unit_equation_over_Q(S):
+def solve_S_unit_equation_over_Q(S,precision):
     r"""
     
     INPUT:
         - ``S`` : a list of primes
+        - ``precision`` : the precision for the calculations of the `p`-adic logarithms
     
     OUTPUT:
         All the `x` of the pairs of the solutions of the `S`-unit equation `x+y=1`
@@ -427,54 +487,178 @@ def solve_S_unit_equation_over_Q(S):
         raise ValueError('S contains a composite number')
     
     #we find an upper bound
-    B = applying_De_Weger_method(S,150)
-       
-    return simple_loop(S,B)
+    B = applying_De_Weger_method(S,precision)
+    return sieve_S_unit_equation_over_Q(S,B,precision)
 
 
-def sieve_with_hilbert_symbol_over_QQ(S,B):
-    r"""
-    
-    INPUT:
-        - ``S`` : a finite set of primes
-        - ``B`` : a natural number
-        
-    OUTPUT:
-        All the `x` of the pairs of the solutions of the `S`-unit equation `x+y=1` such that the absolute values of the exponents of `x,y` are smaller than ``B``. We use general Hilbert symbol for the sieve.
-    
-    EXAMPLE::
-        
-        sage: 
+def trivial_Tp_finite_place_over_Q(S,p,bounds,delta,precision):
     """
-    A = copy(zero_matrix(ZZ,len(S),2 * len(S)))
-    for k,p in enumerate(S):
-        v = copy(A[k])
-        for i,p1 in enumerate(S):
-            for j,p2 in enumerate(S):
-                if p == 2:
-                    if general_hilbert_symbol(p1,p2,p,2) == -1:
-                        v[i] += 1
-                        v[len(S) + j] += 1
-                else:
-                    v[i] += general_hilbert_symbol(p1,p2,p,p-1).log()
-                    v[len(S)+j] += general_hilbert_symbol(p1,p2,p,p-1).log()
-                A[k] = v
-      
-    #N = [0] * len(S)
-    #for i,p in enumerate(S):
-    #    if p == 2:
-    #        N[i] = 2
-    #    else:
-    #        N[i] = p-1
-    #print N
-    #g = lcm([p-1 for p in S if p != 2])
-   # 
-    #T = []
-    #for v in cartesian_product_iterator([xrange(g)] * 2 * len(S)):
-    #    v = vector(v)
-    #    t = A * v
-    #    #print 'v,t,[]',v,t,[1 for s,n in zip(t,N) if t%n != 0]
-    #    if not (len([1 for s,n in zip(t,N) if t%n != 0]) > 0):
-    #        T.append(v)
-    #print 'len(T)',len(T)
-    return 1
+
+    INPUT:
+        ``S``: a list of rational primes
+        ``p``: a rational prime
+        ``bounds``: a list of upper bounds for the exponents of the primes in ``S``
+        ``delta``: a real number less than 1
+
+    OUTPUT:
+
+        True, if the inequality `|x-1|_{p}<\delta` does not have non-trivial solutions with
+        `x=\prod_{p_i\neq p} p_i^{e_i}` for `p_i\in S` and `|e_i|\leq B`. Otherwise, False
+
+    COMMENTS:
+
+        Here we implement paragraph 3.2 of the reference.
+
+    REFERENCE:
+        REFERENCE:
+        SMART, N. , Determine the small solutions to S-unit equations, Mathematics of Computations 68(228):1687-1699,1999
+
+    EXAMPLE::
+
+        sage:
+    """
+
+    if p in S:
+        i = S.index(p)
+        S.remove(p)
+        bounds.pop(i)
+
+    deltaprime = (-log(delta))/log(p)
+    if deltaprime < 1:
+        return False
+
+    K = Qp(p, prec = precision, type = 'capped-rel', print_mode = 'series')
+    LogS = [K(x).log() for x in S]
+
+    c6 = min([x.valuation() for x in LogS])
+    lam = p**c6
+    M = [x/lam for x in LogS]
+    c7 = RR(deltaprime - c6).floor()
+
+    A = copy(identity_matrix(ZZ,len(S)))
+    B = copy(zero_matrix(ZZ,len(S),1))
+
+    u = 1
+    while u <= c7:
+        if u > precision:
+            K = Qp(p, prec = precision, type = 'capped-rel', print_mode = 'series')
+            LogS = [K(x).log() for x in S]
+            M = [x/lam for x in LogS]
+        Int = Integers(p**u)
+        C = matrix(ZZ,[Int(x) for x in M]+[p**u])
+        L = block_matrix([[block_matrix([[A,B]])],[C]])
+        l = minimal_vector(L.transpose(),zero_vector(ZZ,len(S)+1))
+        if l**2 > sum([b**2 for b in bounds]):
+            return True
+        u += 1
+    return False
+
+
+def sieve_S_unit_equation_over_Q(S,B,precision):
+    r"""
+
+    INPUT:
+        - ``S`` : a list of primes
+        - ``B`` : an upper bound of the absolute value of the exponents for the solutions
+        - ``precision`` : the precision for the calculations of `p`-adic logarithms
+
+    OUTPUT:
+
+        A list of `x` of all the solutions of the `S`-unit group `x+y=1`
+
+    COMMENTS:
+        The sieve is based on the ideas of the paper in the reference
+
+    REFERENCE:
+        SMART, N. , Determine the small solutions to S-unit equations, Mathematics of Computations 68(228):1687-1699,1999
+
+    EXAMPLES::
+
+        sage:
+    """
+    #I define Q as a number field
+    bounds = len(S) * [B]
+
+    for i,p in enumerate(S):
+        B0 = 1
+        B1 = bounds[i]
+        Bmid = floor((B0+B1)/2)
+        Scopy = copy(S)
+        boundscopy = copy(bounds)
+        while (B0-B1).abs() > 1:
+            delta = (p**(-Bmid))
+            if trivial_Tp_finite_place_over_Q(Scopy,p,boundscopy,delta,precision):
+                B1 = Bmid
+                Bmid = floor((B0+B1)/2)
+            else:
+                B0 = Bmid
+                Bmid = floor((B0+B1)/2)
+
+        bounds[i] = B1
+    Sol = []
+
+    #we find solutions which are divible by a `suitable' high power of a prime in S and are positive.
+    #We do that only for odd primes
+
+    for p in S:
+        if p%2 == 1:
+            m = max(1,RR((log(bounds[S.index(p)])-log(2)-log(p-1))/log(p)).round())
+            Sol += solutions_divible_by_higher_power_of_p(S,p,bounds,m)
+            bounds[S.index(p)] = m-1
+    Sol += simple_loop(S,bounds)
+    for l in Sol:
+        temp = [l,1-l,1/l,1-1/l,1/(1-l),l/(l-1)]
+        for a in temp:
+            if a not in Sol:
+                Sol.append(a)
+    solutions =[]
+    for a in Sol:
+        if a not in solutions:
+            solutions.append(a)
+
+    return solutions
+
+
+def solutions_divible_by_higher_power_of_p(S,p,bounds,m):
+    r"""
+
+    INPUT:
+        - ``S`` : a set of primes which contains ``p``
+        - ``p`` : a prime number in ``S``
+        - ``bounds`` : a list of natural numbers
+        - ``m`` : a natural number
+
+    OUTPUT:
+        All `x` of the solutions of the `S`-unit equation `x+y=1` such that `y` is divisible by `p^m`.
+    """
+    if p not in S:
+        raise ValueError('p not in S')
+    Snp = copy(S)
+    Bnp = copy(bounds)
+    Snp.remove(p)
+    Bnp.remove(Bnp[S.index(p)])
+    Zpm = Integers(p**m)
+    order = Zpm.unit_group_order()
+
+    #we find the powers of primes in Snp that are congruence to 1 mod p^m
+    A = vector(ZZ,[Zpm(q).log() for q in [-1]+Snp])
+    B = [b//order for b in Bnp]
+    X0 = []
+    V = []
+    for v in cartesian_product_iterator([xrange(2)]+[xrange(order)]*len(Bnp)):
+        if (vector(v)*A)%order == 0:
+            X0.append(QQ(prod([p**e for e,p in zip(v,[-1]+Snp)])))
+            V.append(vector(v))
+
+    #we find the solutions x such that x is congruence to 1 mod p**m
+    #applying Smart's ideas using Fincke-Pohst algorithm
+
+    solutions = []
+    Snp_power = [q**order for q in Snp]
+    for x0 in X0:
+        for v in cartesian_product_iterator([xrange(-b-1,b+1) for b in B]):
+            x1 = prod([q**e for e,q in zip(v,Snp_power)])
+            if (QQ(1-x0*x1)).prime_to_S_part(S).abs() == 1:
+                solutions.append(x0*x1)
+
+    return solutions
